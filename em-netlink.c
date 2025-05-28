@@ -237,9 +237,55 @@ out_free:
 	return ret;
 }
 
+static const char *event_to_str(int event)
+{
+	switch(event) {
+	case EM_GENL_EVENT_PD_CREATE:
+		return "EM_GENL_EVENT_PD_CREATE";
+	case EM_GENL_EVENT_PD_DELETE:
+		return "EM_GENL_EVENT_PD_DELETE";
+	case EM_GENL_EVENT_PD_UPDATE:
+		return "EM_GENL_EVENT_PD_UPDATE";
+	};
+
+	return "Unknown event";
+}
+
+static int cb_event(struct nl_msg *msg, void *arg)
+{
+	struct nlmsghdr *nlh = nlmsg_hdr(msg);
+	struct genlmsghdr *ghdr = genlmsg_hdr(nlh);
+	struct nlattr *attrs[EM_PD_GENL_ATTR_MAX + 1];
+	int ret;
+
+	nl_msg_dump(msg, stdout);
+
+	ret = genlmsg_parse(nlh, 0, attrs, EM_PD_GENL_ATTR_ID, NULL);
+	if (ret < 0) {
+		fprintf(stderr, "Failed to parse an incoming message\n");
+		return NL_STOP;
+	}
+
+	printf("%s (%d)\n", event_to_str(ghdr->cmd), ghdr->cmd);
+	if (attrs[EM_PD_GENL_ATTR_ID])
+		printf("  PD_ID: %d\n", nla_get_u32(attrs[EM_PD_GENL_ATTR_ID]));
+
+	return NL_OK;
+}
+
+static int cb_ignore_seq_check(struct nl_msg *msg, void *arg)
+{
+	/*
+	 * Ignore the sequence number checking since we share a socket
+	 * for requests and multicast events.
+	 */
+	return NL_OK;
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
+	struct nl_cb *cb = NULL;
 
 	/* Establish a netlink connection. */
 	ret = init_nl_conn();
@@ -268,13 +314,34 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	/* Listening for kernel events. */
+	printf("==== Literning for kernel events...\n");
+	cb = nl_cb_alloc(NL_CB_DEFAULT);
+	if (!cb) {
+		fprintf(stderr, "Failed to allocate a callback.\n");
+		goto out_err;
+	}
+	nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, cb_ignore_seq_check, NULL);
+	nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, cb_event, NULL);
+
+	while (1) {
+		ret = nl_recvmsgs(sock, cb);
+		if (ret < 0) {
+			fprintf(stderr, "nl_recvmsgs_default() failed: %s\n", nl_geterror(ret));
+			break;
+		}
+	}
+
 	/* Tear down the netlink connection. */
+	nl_cb_put(cb);
 	nl_socket_free(sock);
 	fprintf(stderr, "Finished with no error.\n");
 	return 0;
 
 	/* Exit with errors. */
 out_err:
+	if (cb)
+		nl_cb_put(cb);
 	if (sock)
 		nl_socket_free(sock);
 	fprintf(stderr, "Finished with some error.\n");
