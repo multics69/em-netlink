@@ -1,349 +1,401 @@
-/*
- * Copyright (c) 2025 Valve Corporation.
- * Author: Changwoo Min <changwoo@igalia.com>
- */
-#include <stdio.h>
+// SPDX-License-Identifier: ((GPL-2.0 WITH Linux-syscall-note) OR BSD-3-Clause)
+/* Do not edit directly, auto-generated from: */
+/*	Documentation/netlink/specs/em.yaml */
+/* YNL-GEN user source */
+
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
+#include "generated_header_file.h"
+#include "ynl.h"
+#include <linux/energy_model.h>
 
-#include <netlink/netlink.h>
-#include <netlink/genl/genl.h>
-#include <netlink/genl/ctrl.h>
-#include <netlink/msg.h>
-#include <netlink/attr.h>
+#include <linux/genetlink.h>
 
-#include "energy_model.h" /* include/uapi/linux/energy_model.h */
-
-static const struct nla_policy em_pd_genl_policy[EM_PD_GENL_ATTR_MAX + 1] = {
-	[EM_PD_GENL_ATTR_ID]			= { .type = NLA_U32 },
-	[EM_PD_GENL_ATTR_FLAGS]			= { .type = NLA_U64 },
-	[EM_PD_GENL_ATTR_CPUS]			= { .type = NLA_STRING },
+/* Enums */
+static const char * const em_op_strmap[] = {
+	[EM_CMD_GET_PDS] = "get-pds",
+	[EM_CMD_GET_PD_TABLE] = "get-pd-table",
+	[EM_CMD_PD_CREATED] = "pd-created",
+	[EM_CMD_PD_UPDATED] = "pd-updated",
+	[EM_CMD_PD_DELETED] = "pd-deleted",
 };
 
-static const struct nla_policy em_tbl_genl_policy[EM_TBL_GENL_ATTR_MAX + 1] = {
-	[EM_TBL_GENL_ATTR_PS_PERFORMANCE]	= { .type = NLA_U64 },
-	[EM_TBL_GENL_ATTR_PS_FREQUENCY]		= { .type = NLA_U64 },
-	[EM_TBL_GENL_ATTR_PS_POWER]		= { .type = NLA_U64 },
-	[EM_TBL_GENL_ATTR_PS_COST]		= { .type = NLA_U64 },
-	[EM_TBL_GENL_ATTR_PS_FLAGS]		= { .type = NLA_U64 },
-};
-
-struct nl_sock *sock;
-int family_id, mc_id;
-
-#define MAX_PD_IDS 4096
-int pd_ids[MAX_PD_IDS];
-int nr_pd_ids;
-
-int init_nl_conn(void)
+const char *em_op_str(int op)
 {
-	int ret;
+	if (op < 0 || op >= (int)YNL_ARRAY_SIZE(em_op_strmap))
+		return NULL;
+	return em_op_strmap[op];
+}
 
-	sock = nl_socket_alloc();
-	if (!sock) {
-		fprintf(stderr, "Failed to allocate netlink socket\n");
-		return 1;
-	}
+/* Policies */
+const struct ynl_policy_attr em_pd_policy[EM_A_PD_MAX + 1] = {
+	[EM_A_PD_PAD] = { .name = "pad", .type = YNL_PT_IGNORE, },
+	[EM_A_PD_PD_ID] = { .name = "pd-id", .type = YNL_PT_U32, },
+	[EM_A_PD_FLAGS] = { .name = "flags", .type = YNL_PT_U64, },
+	[EM_A_PD_CPUS] = { .name = "cpus", .type = YNL_PT_NUL_STR, },
+};
 
-	if (genl_connect(sock)) {
-		fprintf(stderr, "Failed to connect to generic netlink\n");
-		return 1;
-	}
+const struct ynl_policy_nest em_pd_nest = {
+	.max_attr = EM_A_PD_MAX,
+	.table = em_pd_policy,
+};
 
-	family_id = genl_ctrl_resolve(sock, EM_GENL_FAMILY_NAME);
-	if (family_id < 0) {
-		fprintf(stderr, "Failed to resolve energy_model family id\n");
-		return 1;
-	}
+const struct ynl_policy_attr em_ps_policy[EM_A_PS_MAX + 1] = {
+	[EM_A_PS_PAD] = { .name = "pad", .type = YNL_PT_IGNORE, },
+	[EM_A_PS_PERFORMANCE] = { .name = "performance", .type = YNL_PT_U64, },
+	[EM_A_PS_FREQUENCY] = { .name = "frequency", .type = YNL_PT_U64, },
+	[EM_A_PS_POWER] = { .name = "power", .type = YNL_PT_U64, },
+	[EM_A_PS_COST] = { .name = "cost", .type = YNL_PT_U64, },
+	[EM_A_PS_FLAGS] = { .name = "flags", .type = YNL_PT_U64, },
+};
 
-	mc_id = genl_ctrl_resolve_grp(sock, EM_GENL_FAMILY_NAME, EM_GENL_EVENT_GROUP_NAME);
-	if (mc_id < 0) {
-		fprintf(stderr, "Failed to resolve energy_model multicast group\n");
-		return 1;
-	}
+const struct ynl_policy_nest em_ps_nest = {
+	.max_attr = EM_A_PS_MAX,
+	.table = em_ps_policy,
+};
 
-	ret = nl_socket_add_membership(sock, mc_id);
-	if (ret < 0) {
-		fprintf(stderr, "Failed to join multicast group\n");
-		return 1;
+const struct ynl_policy_attr em_pds_policy[EM_A_PDS_MAX + 1] = {
+	[EM_A_PDS_PD] = { .name = "pd", .type = YNL_PT_NEST, .nest = &em_pd_nest, },
+};
+
+const struct ynl_policy_nest em_pds_nest = {
+	.max_attr = EM_A_PDS_MAX,
+	.table = em_pds_policy,
+};
+
+const struct ynl_policy_attr em_pd_table_policy[EM_A_PD_TABLE_MAX + 1] = {
+	[EM_A_PD_TABLE_PD_ID] = { .name = "pd-id", .type = YNL_PT_U32, },
+	[EM_A_PD_TABLE_PS] = { .name = "ps", .type = YNL_PT_NEST, .nest = &em_ps_nest, },
+};
+
+const struct ynl_policy_nest em_pd_table_nest = {
+	.max_attr = EM_A_PD_TABLE_MAX,
+	.table = em_pd_table_policy,
+};
+
+/* Common nested types */
+void em_pd_free(struct em_pd *obj)
+{
+	free(obj->cpus);
+}
+
+int em_pd_parse(struct ynl_parse_arg *yarg, const struct nlattr *nested)
+{
+	struct em_pd *dst = yarg->data;
+	const struct nlattr *attr;
+
+	ynl_attr_for_each_nested(attr, nested) {
+		unsigned int type = ynl_attr_type(attr);
+
+		if (type == EM_A_PD_PD_ID) {
+			if (ynl_attr_validate(yarg, attr))
+				return YNL_PARSE_CB_ERROR;
+			dst->_present.pd_id = 1;
+			dst->pd_id = ynl_attr_get_u32(attr);
+		} else if (type == EM_A_PD_FLAGS) {
+			if (ynl_attr_validate(yarg, attr))
+				return YNL_PARSE_CB_ERROR;
+			dst->_present.flags = 1;
+			dst->flags = ynl_attr_get_u64(attr);
+		} else if (type == EM_A_PD_CPUS) {
+			unsigned int len;
+
+			if (ynl_attr_validate(yarg, attr))
+				return YNL_PARSE_CB_ERROR;
+
+			len = strnlen(ynl_attr_get_str(attr), ynl_attr_data_len(attr));
+			dst->_len.cpus = len;
+			dst->cpus = malloc(len + 1);
+			memcpy(dst->cpus, ynl_attr_get_str(attr), len);
+			dst->cpus[len] = 0;
+		}
 	}
 
 	return 0;
 }
 
-static int cb_pd_get_id(struct nl_msg *msg, void *arg)
+void em_ps_free(struct em_ps *obj)
 {
-	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
-	struct nlattr *attrs[EM_GENL_ATTR_MAX + 1];
-	struct nlattr *pd_attrs[EM_PD_GENL_ATTR_MAX + 1];
-	struct nlattr *cur;
-	int rem;
-
-	nl_msg_dump(msg, stdout);
-
-	nla_parse(attrs, EM_GENL_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
-		  genlmsg_attrlen(gnlh, 0), NULL);
-
-	if (!attrs[EM_GENL_ATTR_PD]) {
-		fprintf(stderr, "Missing a mandatory attribute.\n");
-		return NL_SKIP;
-	}
-
-	nla_for_each_nested(cur, attrs[EM_GENL_ATTR_PD], rem) {
-		if (nla_parse_nested(pd_attrs, EM_PD_GENL_ATTR_MAX, cur, em_pd_genl_policy)) {
-			fprintf(stderr, "Failed to parse performance domain information.\n");
-			continue;
-		}
-
-		if (pd_attrs[EM_PD_GENL_ATTR_ID])
-			printf("PD_ID: %d\n", nla_get_u32(pd_attrs[EM_PD_GENL_ATTR_ID]));
-		if (pd_attrs[EM_PD_GENL_ATTR_FLAGS])
-			printf("  PD_FLAGS: 0x%lx\n", nla_get_u64(pd_attrs[EM_PD_GENL_ATTR_FLAGS]));
-		if (pd_attrs[EM_PD_GENL_ATTR_CPUS])
-			printf("  PD_CPUS: %s\n", nla_get_string(pd_attrs[EM_PD_GENL_ATTR_CPUS]));
-
-		pd_ids[nr_pd_ids++] = nla_get_u32(pd_attrs[EM_PD_GENL_ATTR_ID]);
-		if (nr_pd_ids >= MAX_PD_IDS) {
-			fprintf(stderr, "There are too many performance domains.\n");
-			return NL_SKIP;
-		}
-	}
-
-	return NL_OK;
 }
 
-int cmd_pd_get_id(void)
+int em_ps_parse(struct ynl_parse_arg *yarg, const struct nlattr *nested)
 {
-	struct nl_msg *msg;
-	int ret;
+	struct em_ps *dst = yarg->data;
+	const struct nlattr *attr;
 
-	msg = nlmsg_alloc();
-	if (!msg) {
-		fprintf(stderr, "Failed to allocate netlink message\n");
-		return 1;
-	}
+	ynl_attr_for_each_nested(attr, nested) {
+		unsigned int type = ynl_attr_type(attr);
 
-	genlmsg_put(msg, NL_AUTO_PORT, NL_AUTO_SEQ, family_id, 0, 0,
-		    EM_GENL_CMD_PD_GET_ID, EM_GENL_VERSION);
-
-	nl_socket_modify_cb(sock, NL_CB_VALID, NL_CB_CUSTOM, cb_pd_get_id, NULL);
-
-	ret = nl_send_auto(sock, msg);
-	if (ret < 0) {
-		fprintf(stderr, "Failed to send netlink message\n");
-		goto out_free;
-	}
-
-	ret = nl_wait_for_ack(sock);
-	if (ret < 0) {
-		fprintf(stderr, "Failed to wait for a ACK message\n");
-		goto out_free;
-	}
-
-	ret = nl_recvmsgs_default(sock);
-	if (ret < 0) {
-		fprintf(stderr, "Failed to receive netlink responses: %d\n", ret);
-		goto out_free;
-	}
-
-out_free:
-	nlmsg_free(msg);
-	return ret;
-}
-
-static int cb_pd_get_tbl(struct nl_msg *msg, void *arg)
-{
-	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
-	struct nlattr *attrs[EM_GENL_ATTR_MAX + 1];
-	struct nlattr *tbl_attrs[EM_TBL_GENL_ATTR_MAX + 1];
-	struct nlattr *cur;
-	int i, rem;
-
-	nl_msg_dump(msg, stdout);
-
-	nla_parse(attrs, EM_GENL_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
-		  genlmsg_attrlen(gnlh, 0), NULL);
-
-	if (!attrs[EM_GENL_ATTR_PD_TBL]) {
-		fprintf(stderr, "Missing a mandatory attribute.\n");
-		return NL_SKIP;
-	}
-
-	i = 0;
-	nla_for_each_nested(cur, attrs[EM_GENL_ATTR_PD_TBL], rem) {
-		if (nla_parse_nested(tbl_attrs, EM_TBL_GENL_ATTR_MAX, cur, em_tbl_genl_policy)) {
-			fprintf(stderr, "Failed to parse performance domain information.\n");
-			continue;
-		}
-
-		if (tbl_attrs[EM_TBL_GENL_ATTR_PS_PERFORMANCE])
-			printf("[%d] PERFORMANCE: %lu\n", i, nla_get_u64(tbl_attrs[EM_TBL_GENL_ATTR_PS_PERFORMANCE]));
-		if (tbl_attrs[EM_TBL_GENL_ATTR_PS_FREQUENCY])
-			printf("  [%d] FREQUENCY: %lu\n", i, nla_get_u64(tbl_attrs[EM_TBL_GENL_ATTR_PS_FREQUENCY]));
-		if (tbl_attrs[EM_TBL_GENL_ATTR_PS_POWER])
-			printf("  [%d] POWER: %lu\n", i, nla_get_u64(tbl_attrs[EM_TBL_GENL_ATTR_PS_POWER]));
-		if (tbl_attrs[EM_TBL_GENL_ATTR_PS_COST])
-			printf("  [%d] COST: %lu\n", i, nla_get_u64(tbl_attrs[EM_TBL_GENL_ATTR_PS_COST]));
-		if (tbl_attrs[EM_TBL_GENL_ATTR_PS_FLAGS])
-			printf("  [%d] FLAGS: 0x%lx\n", i, nla_get_u64(tbl_attrs[EM_TBL_GENL_ATTR_PS_FLAGS]));
-
-		i++;
-	}
-
-	return NL_OK;
-}
-
-int cmd_pd_get_tbl(int pd_id)
-{
-	struct nl_msg *msg;
-	int ret;
-
-	msg = nlmsg_alloc();
-	if (!msg) {
-		fprintf(stderr, "Failed to allocate netlink message\n");
-		return 1;
-	}
-
-	genlmsg_put(msg, NL_AUTO_PORT, NL_AUTO_SEQ, family_id, 0, 0,
-		    EM_GENL_CMD_PD_GET_TBL, EM_GENL_VERSION);
-
-	nla_put_u32(msg, EM_PD_GENL_ATTR_ID, pd_id);
-
-	nl_socket_modify_cb(sock, NL_CB_VALID, NL_CB_CUSTOM, cb_pd_get_tbl, NULL);
-
-	ret = nl_send_auto(sock, msg);
-	if (ret < 0) {
-		fprintf(stderr, "Failed to send netlink message\n");
-		goto out_free;
-	}
-
-	ret = nl_wait_for_ack(sock);
-	if (ret < 0) {
-		fprintf(stderr, "Failed to wait for a ACK message\n");
-		goto out_free;
-	}
-
-	ret = nl_recvmsgs_default(sock);
-	if (ret < 0) {
-		fprintf(stderr, "Failed to receive netlink responses: %d\n", ret);
-		goto out_free;
-	}
-
-out_free:
-	nlmsg_free(msg);
-	return ret;
-}
-
-static const char *event_to_str(int event)
-{
-	switch(event) {
-	case EM_GENL_EVENT_PD_CREATE:
-		return "EM_GENL_EVENT_PD_CREATE";
-	case EM_GENL_EVENT_PD_DELETE:
-		return "EM_GENL_EVENT_PD_DELETE";
-	case EM_GENL_EVENT_PD_UPDATE:
-		return "EM_GENL_EVENT_PD_UPDATE";
-	};
-
-	return "Unknown event";
-}
-
-static int cb_event(struct nl_msg *msg, void *arg)
-{
-	struct nlmsghdr *nlh = nlmsg_hdr(msg);
-	struct genlmsghdr *ghdr = genlmsg_hdr(nlh);
-	struct nlattr *attrs[EM_PD_GENL_ATTR_MAX + 1];
-	int ret;
-
-	nl_msg_dump(msg, stdout);
-
-	ret = genlmsg_parse(nlh, 0, attrs, EM_PD_GENL_ATTR_ID, NULL);
-	if (ret < 0) {
-		fprintf(stderr, "Failed to parse an incoming message\n");
-		return NL_STOP;
-	}
-
-	printf("%s (%d)\n", event_to_str(ghdr->cmd), ghdr->cmd);
-	if (attrs[EM_PD_GENL_ATTR_ID])
-		printf("  PD_ID: %d\n", nla_get_u32(attrs[EM_PD_GENL_ATTR_ID]));
-
-	return NL_OK;
-}
-
-static int cb_ignore_seq_check(struct nl_msg *msg, void *arg)
-{
-	/*
-	 * Ignore the sequence number checking since we share a socket
-	 * for requests and multicast events.
-	 */
-	return NL_OK;
-}
-
-int main(int argc, char *argv[])
-{
-	int ret;
-	struct nl_cb *cb = NULL;
-
-	/* Establish a netlink connection. */
-	ret = init_nl_conn();
-	if (ret) {
-		fprintf(stderr, "Failed to fail to initialize the netlink connection.\n");
-		goto out_err;
-	}
-
-	/* Request the list of information for all performance domains. */
-	printf("==== List of performace domains.\n");
-  	ret = cmd_pd_get_id();
-	if (ret) {
-		fprintf(stderr, "Failed to get pd id\n");
-		goto out_err;
-	}
-
-	/* Request the energy model for each performance domain. */
-	for (int i = 0; i < nr_pd_ids; i++) {
-		int pd_id = pd_ids[i];
-
-		printf("==== Energy model for performance domain %d\n", pd_id);
-		ret = cmd_pd_get_tbl(pd_id);
-		if (ret) {
-			fprintf(stderr, "Failed to get pd id\n");
-			goto out_err;
+		if (type == EM_A_PS_PERFORMANCE) {
+			if (ynl_attr_validate(yarg, attr))
+				return YNL_PARSE_CB_ERROR;
+			dst->_present.performance = 1;
+			dst->performance = ynl_attr_get_u64(attr);
+		} else if (type == EM_A_PS_FREQUENCY) {
+			if (ynl_attr_validate(yarg, attr))
+				return YNL_PARSE_CB_ERROR;
+			dst->_present.frequency = 1;
+			dst->frequency = ynl_attr_get_u64(attr);
+		} else if (type == EM_A_PS_POWER) {
+			if (ynl_attr_validate(yarg, attr))
+				return YNL_PARSE_CB_ERROR;
+			dst->_present.power = 1;
+			dst->power = ynl_attr_get_u64(attr);
+		} else if (type == EM_A_PS_COST) {
+			if (ynl_attr_validate(yarg, attr))
+				return YNL_PARSE_CB_ERROR;
+			dst->_present.cost = 1;
+			dst->cost = ynl_attr_get_u64(attr);
+		} else if (type == EM_A_PS_FLAGS) {
+			if (ynl_attr_validate(yarg, attr))
+				return YNL_PARSE_CB_ERROR;
+			dst->_present.flags = 1;
+			dst->flags = ynl_attr_get_u64(attr);
 		}
 	}
 
-	/* Listening for kernel events. */
-	printf("==== Literning for kernel events...\n");
-	cb = nl_cb_alloc(NL_CB_DEFAULT);
-	if (!cb) {
-		fprintf(stderr, "Failed to allocate a callback.\n");
-		goto out_err;
-	}
-	nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, cb_ignore_seq_check, NULL);
-	nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, cb_event, NULL);
-
-	while (1) {
-		ret = nl_recvmsgs(sock, cb);
-		if (ret < 0) {
-			fprintf(stderr, "nl_recvmsgs_default() failed: %s\n", nl_geterror(ret));
-			break;
-		}
-	}
-
-	/* Tear down the netlink connection. */
-	nl_cb_put(cb);
-	nl_socket_free(sock);
-	fprintf(stderr, "Finished with no error.\n");
 	return 0;
-
-	/* Exit with errors. */
-out_err:
-	if (cb)
-		nl_cb_put(cb);
-	if (sock)
-		nl_socket_free(sock);
-	fprintf(stderr, "Finished with some error.\n");
-	return ret;
 }
+
+/* ============== EM_CMD_GET_PDS ============== */
+/* EM_CMD_GET_PDS - do */
+void em_get_pds_rsp_free(struct em_get_pds_rsp *rsp)
+{
+	unsigned int i;
+
+	for (i = 0; i < rsp->_count.pd; i++)
+		em_pd_free(&rsp->pd[i]);
+	free(rsp->pd);
+	free(rsp);
+}
+
+int em_get_pds_rsp_parse(const struct nlmsghdr *nlh,
+			 struct ynl_parse_arg *yarg)
+{
+	struct em_get_pds_rsp *dst;
+	const struct nlattr *attr;
+	struct ynl_parse_arg parg;
+	unsigned int n_pd = 0;
+	int i;
+
+	dst = yarg->data;
+	parg.ys = yarg->ys;
+
+	if (dst->pd)
+		return ynl_error_parse(yarg, "attribute already present (pds.pd)");
+
+	ynl_attr_for_each(attr, nlh, yarg->ys->family->hdr_len) {
+		unsigned int type = ynl_attr_type(attr);
+
+		if (type == EM_A_PDS_PD) {
+			n_pd++;
+		}
+	}
+
+	if (n_pd) {
+		dst->pd = calloc(n_pd, sizeof(*dst->pd));
+		dst->_count.pd = n_pd;
+		i = 0;
+		parg.rsp_policy = &em_pd_nest;
+		ynl_attr_for_each(attr, nlh, yarg->ys->family->hdr_len) {
+			if (ynl_attr_type(attr) == EM_A_PDS_PD) {
+				parg.data = &dst->pd[i];
+				if (em_pd_parse(&parg, attr))
+					return YNL_PARSE_CB_ERROR;
+				i++;
+			}
+		}
+	}
+
+	return YNL_PARSE_CB_OK;
+}
+
+struct em_get_pds_rsp *em_get_pds(struct ynl_sock *ys)
+{
+	struct ynl_req_state yrs = { .yarg = { .ys = ys, }, };
+	struct em_get_pds_rsp *rsp;
+	struct nlmsghdr *nlh;
+	int err;
+
+	nlh = ynl_gemsg_start_req(ys, ys->family_id, EM_CMD_GET_PDS, 1);
+	ys->req_policy = &em_pds_nest;
+	ys->req_hdr_len = ys->family->hdr_len;
+	yrs.yarg.rsp_policy = &em_pds_nest;
+
+	rsp = calloc(1, sizeof(*rsp));
+	yrs.yarg.data = rsp;
+	yrs.cb = em_get_pds_rsp_parse;
+	yrs.rsp_cmd = EM_CMD_GET_PDS;
+
+	err = ynl_exec(ys, nlh, &yrs);
+	if (err < 0)
+		goto err_free;
+
+	return rsp;
+
+err_free:
+	em_get_pds_rsp_free(rsp);
+	return NULL;
+}
+
+/* ============== EM_CMD_GET_PD_TABLE ============== */
+/* EM_CMD_GET_PD_TABLE - do */
+void em_get_pd_table_req_free(struct em_get_pd_table_req *req)
+{
+	free(req);
+}
+
+void em_get_pd_table_rsp_free(struct em_get_pd_table_rsp *rsp)
+{
+	unsigned int i;
+
+	for (i = 0; i < rsp->_count.ps; i++)
+		em_ps_free(&rsp->ps[i]);
+	free(rsp->ps);
+	free(rsp);
+}
+
+int em_get_pd_table_rsp_parse(const struct nlmsghdr *nlh,
+			      struct ynl_parse_arg *yarg)
+{
+	struct em_get_pd_table_rsp *dst;
+	const struct nlattr *attr;
+	struct ynl_parse_arg parg;
+	unsigned int n_ps = 0;
+	int i;
+
+	dst = yarg->data;
+	parg.ys = yarg->ys;
+
+	if (dst->ps)
+		return ynl_error_parse(yarg, "attribute already present (pd-table.ps)");
+
+	ynl_attr_for_each(attr, nlh, yarg->ys->family->hdr_len) {
+		unsigned int type = ynl_attr_type(attr);
+
+		if (type == EM_A_PD_TABLE_PD_ID) {
+			if (ynl_attr_validate(yarg, attr))
+				return YNL_PARSE_CB_ERROR;
+			dst->_present.pd_id = 1;
+			dst->pd_id = ynl_attr_get_u32(attr);
+		} else if (type == EM_A_PD_TABLE_PS) {
+			n_ps++;
+		}
+	}
+
+	if (n_ps) {
+		dst->ps = calloc(n_ps, sizeof(*dst->ps));
+		dst->_count.ps = n_ps;
+		i = 0;
+		parg.rsp_policy = &em_ps_nest;
+		ynl_attr_for_each(attr, nlh, yarg->ys->family->hdr_len) {
+			if (ynl_attr_type(attr) == EM_A_PD_TABLE_PS) {
+				parg.data = &dst->ps[i];
+				if (em_ps_parse(&parg, attr))
+					return YNL_PARSE_CB_ERROR;
+				i++;
+			}
+		}
+	}
+
+	return YNL_PARSE_CB_OK;
+}
+
+struct em_get_pd_table_rsp *
+em_get_pd_table(struct ynl_sock *ys, struct em_get_pd_table_req *req)
+{
+	struct ynl_req_state yrs = { .yarg = { .ys = ys, }, };
+	struct em_get_pd_table_rsp *rsp;
+	struct nlmsghdr *nlh;
+	int err;
+
+	nlh = ynl_gemsg_start_req(ys, ys->family_id, EM_CMD_GET_PD_TABLE, 1);
+	ys->req_policy = &em_pd_table_nest;
+	ys->req_hdr_len = ys->family->hdr_len;
+	yrs.yarg.rsp_policy = &em_pd_table_nest;
+
+	if (req->_present.pd_id)
+		ynl_attr_put_u32(nlh, EM_A_PD_TABLE_PD_ID, req->pd_id);
+
+	rsp = calloc(1, sizeof(*rsp));
+	yrs.yarg.data = rsp;
+	yrs.cb = em_get_pd_table_rsp_parse;
+	yrs.rsp_cmd = EM_CMD_GET_PD_TABLE;
+
+	err = ynl_exec(ys, nlh, &yrs);
+	if (err < 0)
+		goto err_free;
+
+	return rsp;
+
+err_free:
+	em_get_pd_table_rsp_free(rsp);
+	return NULL;
+}
+
+/* EM_CMD_GET_PD_TABLE - notify */
+void em_get_pd_table_ntf_free(struct em_get_pd_table_ntf *rsp)
+{
+	unsigned int i;
+
+	for (i = 0; i < rsp->obj._count.ps; i++)
+		em_ps_free(&rsp->obj.ps[i]);
+	free(rsp->obj.ps);
+	free(rsp);
+}
+
+/* EM_CMD_PD_DELETED - event */
+int em_pd_deleted_rsp_parse(const struct nlmsghdr *nlh,
+			    struct ynl_parse_arg *yarg)
+{
+	struct em_pd_deleted_rsp *dst;
+	const struct nlattr *attr;
+
+	dst = yarg->data;
+
+	ynl_attr_for_each(attr, nlh, yarg->ys->family->hdr_len) {
+		unsigned int type = ynl_attr_type(attr);
+
+		if (type == EM_A_PD_TABLE_PD_ID) {
+			if (ynl_attr_validate(yarg, attr))
+				return YNL_PARSE_CB_ERROR;
+			dst->_present.pd_id = 1;
+			dst->pd_id = ynl_attr_get_u32(attr);
+		}
+	}
+
+	return YNL_PARSE_CB_OK;
+}
+
+void em_pd_deleted_free(struct em_pd_deleted *rsp)
+{
+	free(rsp);
+}
+
+static const struct ynl_ntf_info em_ntf_info[] =  {
+	[EM_CMD_PD_CREATED] =  {
+		.alloc_sz	= sizeof(struct em_get_pd_table_ntf),
+		.cb		= em_get_pd_table_rsp_parse,
+		.policy		= &em_pd_table_nest,
+		.free		= (void *)em_get_pd_table_ntf_free,
+	},
+	[EM_CMD_PD_UPDATED] =  {
+		.alloc_sz	= sizeof(struct em_get_pd_table_ntf),
+		.cb		= em_get_pd_table_rsp_parse,
+		.policy		= &em_pd_table_nest,
+		.free		= (void *)em_get_pd_table_ntf_free,
+	},
+	[EM_CMD_PD_DELETED] =  {
+		.alloc_sz	= sizeof(struct em_pd_deleted),
+		.cb		= em_pd_deleted_rsp_parse,
+		.policy		= &em_pd_table_nest,
+		.free		= (void *)em_pd_deleted_free,
+	},
+};
+
+const struct ynl_family ynl_em_family =  {
+	.name		= "em",
+	.hdr_len	= sizeof(struct genlmsghdr),
+	.ntf_info	= em_ntf_info,
+	.ntf_info_size	= YNL_ARRAY_SIZE(em_ntf_info),
+};
