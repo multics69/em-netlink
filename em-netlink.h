@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <linux/types.h>
-#include <linux/energy_model.h>
+#include "energy_model.h"
 
 struct ynl_sock;
 

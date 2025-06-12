@@ -5,9 +5,9 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "generated_header_file.h"
+#include "em-netlink.h"
 #include "ynl.h"
-#include <linux/energy_model.h>
+#include "energy_model.h"
 
 #include <linux/genetlink.h>
 
